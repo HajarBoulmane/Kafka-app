@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Real Time Analytics</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/smoothie/1.36.1/smoothie.min.js"></script>
+</head>
+<body>
+
+<h2>Visites des pages P1 et P2 (5 dernières secondes)</h2>
+<canvas id="chart2" width="600" height="400"></canvas>
+
+<script>
+    var pages = ["P1", "P2"];
+    var colors = [{ stroke: 'rgba(0,255,0,1)' }, { stroke: 'rgba(255,0,0,1)' }];
+    var courbe = [];
+
+    // Le graphique Smoothie, alimenté en continu
+    var smoothieChart = new SmoothieChart({ tooltip: true });
+    smoothieChart.streamTo(document.getElementById("chart2"), 500);
+
+    // Une série temporelle (courbe) par page
+    pages.forEach(function (v, index) {
+        courbe[v] = new TimeSeries();
+        smoothieChart.addTimeSeries(courbe[v], {
+            strokeStyle: colors[index].stroke,
+            lineWidth: 2
+        });
+    });
+
+    // On s'abonne au flux SSE du contrôleur
+    var eventSource = new EventSource("/analytics");
+    eventSource.addEventListener("message", function (event) {
+        var data = JSON.parse(event.data);     // ex: {"P1": 12, "P2": 9}
+        pages.forEach(function (v) {
+            courbe[v].append(new Date().getTime(), data[v] || 0);
+        });
+    });
+</script>
+</body>
+</html>
